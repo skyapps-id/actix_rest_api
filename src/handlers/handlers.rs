@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder, http::StatusCode};
+use actix_web::{web, Responder, http::StatusCode};
 use std::sync::Mutex;
 use uuid::Uuid; 
 
@@ -9,13 +9,13 @@ type Db = Mutex<Vec<Book>>;
 
 pub async fn get_books(db: web::Data<Db>) -> impl Responder {
     let books = db.lock().unwrap();
-    success(books.clone())
+    success(books.clone(), StatusCode::OK)
 }
 
 pub async fn get_book(db: web::Data<Db>, book_id: web::Path<Uuid>) -> impl Responder {
     let books = db.lock().unwrap();
     match books.iter().find(|&book| book.id == Some(*book_id)) {
-        Some(book) => success(book.clone()),
+        Some(book) => success(book.clone(), StatusCode::OK),
         None => fail("Book not found", StatusCode::NOT_FOUND),
     }
 }
@@ -25,7 +25,7 @@ pub async fn create_book(db: web::Data<Db>, new_book: web::Json<Book>) -> impl R
     let mut book = new_book.into_inner();
     book.id = Some(Uuid::new_v4());
     books.push(book.clone());
-    HttpResponse::Created().json(book)
+    success(books.clone(), StatusCode::CREATED)
 }
 
 pub async fn update_book(
@@ -39,9 +39,9 @@ pub async fn update_book(
             book.title = updated_book.title.clone();
             book.author = updated_book.author.clone();
             book.published_year = updated_book.published_year;
-            HttpResponse::Ok().json(book)
+            success(books.clone(), StatusCode::OK)
         }
-        None => HttpResponse::NotFound().finish(),
+        None => fail("Book not found", StatusCode::NOT_FOUND),
     }
 }
 
@@ -49,8 +49,8 @@ pub async fn delete_book(db: web::Data<Db>, book_id: web::Path<Uuid>) -> impl Re
     let mut books = db.lock().unwrap();
     if let Some(pos) = books.iter().position(|book| book.id == Some(*book_id)) {
         books.remove(pos);
-        HttpResponse::Ok().finish()
+        success(books.clone(), StatusCode::OK)
     } else {
-        HttpResponse::NotFound().finish()
+        fail("Book not found", StatusCode::NOT_FOUND)
     }
 }

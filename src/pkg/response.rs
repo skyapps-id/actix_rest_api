@@ -8,13 +8,14 @@ pub struct ApiResponse<T> {
     pub data: T,
 }
 
-pub fn success<T: Serialize>(data: T) -> HttpResponse {
+pub fn success<T: Serialize>(data: T, status_code: StatusCode) -> HttpResponse {
     let response = ApiResponse {
         success: true,
         message: "success".to_string(),
         data,
     };
-    HttpResponse::Ok().json(response)
+
+    HttpResponse::build(status_code).json(response)
 }
 
 pub fn fail(message: &str, status_code: StatusCode) -> HttpResponse {
